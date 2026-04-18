@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service  # هذا الحقل مفقود عندك
+  template:
+    metadata:
+      labels:
+        app: order-service  # وهذا يجب أن يطابق الـ selector
+    spec:
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox:1.28
+          command: [ 'sh', '-c', "until nslookup mysql-order; do echo waiting for mysql; sleep 2; done;" ]
+      containers:
+        - name: order-service
+          image: order-service:v1
+          ports:
+            - containerPort: 8082 # المنفذ الصحيح
+          envFrom:
+            - configMapRef:
+                name: microservices-config
+          env:
+            # الرابط الصحيح للاتصال الداخلي (استخدم 3306 دائماً هنا)
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql-order:3306/order_service?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "root"
+            # إجبار Hibernate على معرفة نوع القاعدة ليتجاوز خطأ الـ Metadata
+            - name: SPRING_JPA_DATABASE_PLATFORM
+              value: "org.hibernate.dialect.MySQLDialect"
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: "update"

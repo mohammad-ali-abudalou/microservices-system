@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-service  # هذا الحقل مفقود عندك
+  template:
+    metadata:
+      labels:
+        app: inventory-service  # وهذا يجب أن يطابق الـ selector
+    spec:
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox:1.28
+          command: [ 'sh', '-c', "until nslookup mysql-inventory; do echo waiting for mysql; sleep 2; done;" ]
+      containers:
+        - name: inventory-service
+          image: inventory-service:v1
+          ports:
+            - containerPort: 8081
+          envFrom:
+            - configMapRef:
+                name: microservices-config
+          env:
+            # الرابط الصحيح للاتصال الداخلي (استخدم 3306 دائماً هنا)
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql-inventory:3306/inventory_service?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "root"
+            # إجبار Hibernate على معرفة نوع القاعدة ليتجاوز خطأ الـ Metadata
+            - name: SPRING_JPA_DATABASE_PLATFORM
+              value: "org.hibernate.dialect.MySQLDialect"
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: "update"

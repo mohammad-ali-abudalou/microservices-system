@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway-service
+  template:
+    metadata:
+      labels:
+        app: gateway-service
+    spec:
+      # --- الجزء السحري: Init Container ---
+      initContainers:
+        - name: wait-for-config-server
+          image: busybox:1.28
+          command: [ 'sh', '-c', "until nslookup config-server; do echo waiting for config-server; sleep 2; done" ]
+
+      containers:
+        - name: gateway-service
+          image: gateway-service:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9000
+          env:
+            - name: SPRING_CONFIG_IMPORT
+              value: "configserver:http://config-server:8888" # التأكد من توجيهه للاسم الصحيح داخل K8s
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+spec:
+  type: NodePort
+  selector:
+    app: gateway-service
+  ports:
+    - port: 9000
+      targetPort: 9000
+      nodePort: 30001
