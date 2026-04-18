@@ -53,6 +53,10 @@ Integrated with **Keycloak** as a centralized Identity Provider. All microservic
 ### Event-Driven Scalability
 By using **Apache Kafka**, we decouple the Order and Notification services. This asynchronous communication ensures that the system remains responsive even under heavy loads.
 
+
+### Architecture Diagram
+![Architecture Diagram](./screenshots/architecture-diagram.png)
+
 ## Project Screenshots
 
 ### Docker Containers Status
