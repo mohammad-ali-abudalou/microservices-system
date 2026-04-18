@@ -1,0 +1,47 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      # تعريف المسارات بشكل منظم (Declarative Routes)
+      routes:
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/order/**
+        - id: inventory-service
+          uri: lb://inventory-service
+          predicates:
+            - Path=/api/inventory/**
+
+    config:
+      import: "optional:configserver:http://config-server:8888"
+      fail-fast: true
+      username: admin
+      password: admin
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # استخدم اسم الخدمة keycloak للعمل داخل Docker
+          issuer-uri: http://localhost:8080/realms/master
+          jwk-set-uri: http://keycloak:8080/realms/master/protocol/openid-connect/certs
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-server:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,tracing
+  tracing:
+    sampling:
+      probability: 1.0 # تسجيل كل الطلبات للتتبع (Tracing)
