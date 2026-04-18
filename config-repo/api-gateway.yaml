@@ -1,0 +1,56 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/order/**
+          filters:
+            - TokenRelay
+            - name: CircuitBreaker
+              args:
+                name: orderService
+                fallbackUri: forward:/orderFallback
+        - id: inventory-service
+          uri: lb://inventory-service
+          predicates:
+            - Path=/api/inventory/**
+          filters:
+            - TokenRelay
+            - PreserveHostHeader # مضاف لضمان وصول الطلب بشكل صحيح
+
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/master
+          jwk-set-uri: http://keycloak:8080/realms/master/protocol/openid-connect/certs
+
+  main:
+    allow-bean-definition-overriding: true
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://discovery-server:8761/eureka/
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: b3
+  zipkin:
+    tracing:
+      endpoint: "http://zipkin:9411/api/v2/spans"
