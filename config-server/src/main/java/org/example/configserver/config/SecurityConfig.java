@@ -13,10 +13,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // تعطيل CSRF للسماح للخدمات بطلب الإعدادات
+                .csrf(csrf -> csrf.disable()) // Stateless clients (services) fetch config; CSRF is not applicable here.
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/**").permitAll() // فتح الرقابة لبروميثيوس
-                        .anyRequest().permitAll() // حالياً نتركها مفتوحة للتطوير، وفي الإنتاج نستخدم Basic Auth
+                        .requestMatchers("/actuator/**").permitAll() // Expose actuator for monitoring (for example Prometheus).
+                        .anyRequest().permitAll() // Development default; restrict with Basic Auth or OAuth in production.
                 );
         return http.build();
     }
