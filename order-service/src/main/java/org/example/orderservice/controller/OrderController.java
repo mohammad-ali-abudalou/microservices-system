@@ -17,6 +17,27 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * REST controller for handling order-related HTTP requests.
+ * <p>
+ * This controller provides endpoints for order placement and management in the e-commerce system.
+ * It validates incoming requests, processes orders through the service layer, and returns
+ * appropriate responses. The controller integrates with Spring Security for authentication
+ * and uses structured logging for request tracking.
+ * <p>
+ * Key features:
+ * <ul>
+ *   <li>JWT-based authentication for secure order placement</li>
+ *   <li>Input validation using Bean Validation annotations</li>
+ *   <li>Comprehensive error handling with custom error responses</li>
+ *   <li>OpenAPI documentation for API specification</li>
+ *   <li>Structured logging for request/response tracking</li>
+ * </ul>
+ *
+ * @author Order Service Team
+ * @version 1.0
+ * @since 2024
+ */
 @RestController
 @RequestMapping("/api/order")
 @RequiredArgsConstructor

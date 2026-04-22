@@ -51,10 +51,6 @@ public class OrderService {
 
     private static final String NOTIFICATION_TOPIC = "notificationTopic";
 
-    static {
-        // Disable automatic cleanup container as it causes connection issues on Windows
-        System.setProperty("testcontainers.ryuk.disabled", "true");
-    }
 
     private final OrderRepository orderRepository;
     private final InventoryClient inventoryClient;
@@ -116,7 +112,6 @@ public class OrderService {
             log.info("Notification event sent to Kafka for order: {}", orderNumber);
         } catch (Exception e) {
             log.error("Failed to send notification event to Kafka: {}", e.getMessage());
-            // Order remains saved for eventual consistency
         }
     }
 

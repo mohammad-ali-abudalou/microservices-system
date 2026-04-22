@@ -48,14 +48,10 @@ public class SecurityConfig {
                 .authorizeExchange(exchange -> exchange
                         .pathMatchers("/eureka/**").permitAll()
                         .pathMatchers("/actuator/**").permitAll()
-                        // Allow health checks without tokens to ensure Kubernetes/Docker functionality
                         .pathMatchers("/api/inventory/**").permitAll()
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(spec -> spec.jwt(Customizer.withDefaults()));
 
         return serverHttpSecurity.build();
     }
-
-    // Removed manual JWT decoder bean - Spring Security now handles JWT decoding
-    // automatically using the configuration from application.yaml
 }

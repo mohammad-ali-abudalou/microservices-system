@@ -12,11 +12,28 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Global exception handler for the Order Service.
+ * <p>
+ * This class provides centralized exception handling for all REST controllers in the order service.
+ * It catches specific exceptions, logs them appropriately, and returns standardized error responses
+ * to clients. This ensures consistent error handling across the API.
+ * <p>
+ * Handled exceptions:
+ * <ul>
+ *   <li>IllegalArgumentException - for inventory validation failures</li>
+ *   <li>MethodArgumentNotValidException - for input validation errors</li>
+ *   <li>Exception - for any unexpected runtime errors</li>
+ * </ul>
+ *
+ * @author Order Service Team
+ * @version 1.0
+ * @since 2024
+ */
 @ControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
-    // 1. Handle inventory shortage error (IllegalArgumentException)
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleInventoryException(IllegalArgumentException ex) {
         log.error("Inventory validation error: {}", ex.getMessage());
@@ -30,7 +47,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
-    // 2. Handle validation errors (MethodArgumentNotValidException)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
         log.error("Validation error: {}", ex.getMessage());
@@ -50,7 +66,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
-    // 3. Handle any unexpected error (General Exception)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex) {
         log.error("Unexpected error occurred", ex);

@@ -27,10 +27,24 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * Integration tests for OrderService using Testcontainers.
  * <p>
- * These tests verify the complete order placement workflow with real database,
- * Kafka, and mocked external services.
+ * These tests verify the complete order placement workflow with real infrastructure components
+ * including MySQL database, Kafka message broker, and mocked external services. The tests
+ * ensure that all integrations work correctly in a containerized environment.
  * <p>
- * Note: These are slower integration tests. Fast unit tests are in {@link OrderServiceTest}.
+ * Test infrastructure:
+ * <ul>
+ *   <li>MySQL container for database operations</li>
+ *   <li>Kafka container for event publishing</li>
+ *   <li>MockWebServer for simulating inventory service responses</li>
+ *   <li>Spring Boot test context with full application configuration</li>
+ * </ul>
+ * <p>
+ * Note: These are integration tests that run slower than unit tests but provide
+ * higher confidence in system behavior.
+ *
+ * @author Order Service Team
+ * @version 1.0
+ * @since 2024
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -77,12 +91,12 @@ class OrderServiceApplicationTests {
 
     @Test
     void shouldCreateOrderSuccessfully() {
-        // 1. Mock inventory service response
+        // Mock inventory service response
         mockWebServer.enqueue(new MockResponse()
                 .setBody("true")
                 .addHeader("Content-Type", "application/json"));
 
-        // 2. Build order request
+        // Build order request
         OrderLineItemsDto itemsDto = OrderLineItemsDto.builder()
                 .skuCode("iphone_15")
                 .price(BigDecimal.valueOf(1200))
@@ -93,11 +107,10 @@ class OrderServiceApplicationTests {
                 .orderLineItemsDtoList(Collections.singletonList(itemsDto))
                 .build();
 
-        // 3. Execute order placement
+        // Execute order placement
         orderService.placeOrder(orderRequest);
 
-        // 4. Verify order persisted to database
+        // Verify order persisted to database
         assertEquals(1, orderRepository.findAll().size());
     }
 }
-

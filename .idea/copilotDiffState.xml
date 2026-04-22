@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="/Order (snapshot).java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="/Order (snapshot).java" />
+              <option name="originalContent" value="package org.example.orderservice.module;&#10;&#10;import jakarta.persistence.*;&#10;import lombok.*;&#10;&#10;import java.util.List;&#10;&#10;@Entity&#10;@Table(name = &quot;t_orders&quot;)&#10;@Getter&#10;@Setter&#10;@NoArgsConstructor&#10;@AllArgsConstructor&#10;@Builder&#10;public class Order {&#10;    @Id&#10;    @GeneratedValue(strategy = GenerationType.IDENTITY)&#10;    private Long id;&#10;    private String orderNumber;&#10;&#10;    @OneToMany(cascade = CascadeType.ALL)&#10;    private List&lt;OrderLineItems&gt; orderLineItemsList;&#10;}" />
+              <option name="updatedContent" value="package org.example.orderservice.module;&#13;&#10;&#13;&#10;import jakarta.persistence.*;&#13;&#10;import lombok.*;&#13;&#10;&#13;&#10;import java.util.List;&#13;&#10;&#13;&#10;/**&#13;&#10; * JPA entity representing an Order in the e-commerce system.&#13;&#10; * &lt;p&gt;&#13;&#10; * This entity maps to the t_orders table in the database and represents a complete&#13;&#10; * customer order with all its line items. It uses JPA annotations for ORM mapping&#13;&#10; * and includes cascade operations for managing related entities.&#13;&#10; * &lt;p&gt;&#13;&#10; * Key relationships:&#13;&#10; * &lt;ul&gt;&#13;&#10; *   &lt;li&gt;One-to-many relationship with OrderLineItems (cascade all operations)&lt;/li&gt;&#13;&#10; *   &lt;li&gt;Auto-generated primary key using IDENTITY strategy&lt;/li&gt;&#13;&#10; * &lt;/ul&gt;&#13;&#10; *&#13;&#10; * @author Order Service Team&#13;&#10; * @version 1.0&#13;&#10; * @since 2024&#13;&#10; */&#13;&#10;@Entity&#13;&#10;@Table(name = &quot;t_orders&quot;)&#13;&#10;@Getter&#13;&#10;@Setter&#13;&#10;@NoArgsConstructor&#13;&#10;@AllArgsConstructor&#13;&#10;@Builder&#13;&#10;public class Order {&#13;&#10;    @Id&#13;&#10;    @GeneratedValue(strategy = GenerationType.IDENTITY)&#13;&#10;    private Long id;&#13;&#10;    private String orderNumber;&#13;&#10;&#13;&#10;    @OneToMany(cascade = CascadeType.ALL)&#13;&#10;    private List&lt;OrderLineItems&gt; orderLineItemsList;&#13;&#10;}" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
