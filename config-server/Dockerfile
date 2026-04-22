@@ -1,7 +1,7 @@
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# إنشاء مجلد الإعدادات لضمان عدم حدوث Error: File not found
+# Create config directory to ensure no "File not found" error occurs
 RUN mkdir -p /app/config-repo
 
 COPY build/libs/*.jar app.jar

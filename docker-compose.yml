@@ -20,10 +20,14 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Define protocols: INTERNAL for containers and EXTERNAL for your machine (IntelliJ)
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # Connection setup:
+      # INTERNAL will work on port 29092 inside the network (for inter-container communication)
+      # EXTERNAL will work on port 9092 (for IntelliJ to communicate with Kafka via localhost)
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-1:29092,EXTERNAL://localhost:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092,PLAINTEXT_HOST://localhost:29092
     networks:
       - spring-network
 
@@ -44,9 +48,19 @@ services:
     ports:
       - "8761:8761"
     environment:
-      - SPRING_CLOUD_CONFIG_ENABLED=false # نلغي اعتماده على config-server ليبدأ فوراً
+      - SPRING_CLOUD_CONFIG_ENABLED=false
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
-      - MANAGEMENT_TRACING_ENABLED=false # نعطله هنا لضمان استقرار Eureka
+      - KEYCLOAK_URL=http://keycloak:8080
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://discovery-server:8761/eureka/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      zipkin:
+        condition: service_started
     networks:
       - spring-network
 
@@ -57,20 +71,21 @@ services:
     ports:
       - "8888:8888"
     depends_on:
-      - discovery-server # حذفنا شرط service_healthy
+      discovery-server:
+        condition: service_healthy
     environment:
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-server:8761/eureka/
-      - SPRING_CLOUD_CONFIG_SERVER_GIT_URI=https://github.com/your-username/your-config-repo
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - EUREKA_SERVER_URL=http://discovery-server:8761/eureka/
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
       - SPRING_PROFILES_ACTIVE=native
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
       - SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS=file:/app/config-repo
+      - KEYCLOAK_URL=http://keycloak:8080
     networks:
       - spring-network
     volumes:
       - "D:/Users/moham/source/microservices-system/config-repo:/app/config-repo"
     healthcheck:
-      test: [ "CMD-SHELL", "java -version || exit 1" ]
+      test: [ "CMD-SHELL", "curl -f http://config-server:8888/actuator/health || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -83,14 +98,17 @@ services:
       - "9000:9000"
     depends_on:
       config-server:
-        condition: service_healthy # انتظر حتى يصبح السيرفر "سليماً"
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
     environment:
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - EUREKA_SERVER_URL=http://discovery-server:8761/eureka/
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - KEYCLOAK_URL=http://keycloak:8080
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
-      - SPRING_CLOUD_CONFIG_RETRY_INITIAL_INTERVAL=3000
-      - SPRING_CLOUD_CONFIG_RETRY_MAX_INTERVAL=10000 # تأكد أن Max > Initial
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
     networks:
       - spring-network
 
@@ -102,15 +120,15 @@ services:
       - "8081:8081"
     depends_on:
       config-server:
-        condition: service_healthy # انتظر حتى يصبح السيرفر "سليماً"
+        condition: service_healthy
     environment:
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-server:8761/eureka/
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - SPRING_CLOUD_CONFIG_RETRY_INITIAL_INTERVAL=3000
-      - SPRING_CLOUD_CONFIG_RETRY_MAX_INTERVAL=10000
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - EUREKA_SERVER_URL=http://discovery-server:8761/eureka/
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9092
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - DB_HOST=mysql-inventory # Ensure this matches your database container name
+      - KEYCLOAK_URL=http://keycloak:8080
     networks:
       - spring-network
 
@@ -122,15 +140,16 @@ services:
       - "8082:8082"
     depends_on:
       config-server:
-        condition: service_healthy # انتظر حتى يصبح السيرفر "سليماً"
+        condition: service_healthy
     environment:
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-server:8761/eureka/
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - SPRING_CLOUD_CONFIG_RETRY_INITIAL_INTERVAL=3000
-      - SPRING_CLOUD_CONFIG_RETRY_MAX_INTERVAL=10000
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - EUREKA_SERVER_URL=http://discovery-server:8761/eureka/
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9092
+      - DB_HOST=mysql-order # Ensure this matches your database container name
+      - SPRING_ZIPKIN_BASE_URL=http://zipkin:9411
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - KEYCLOAK_URL=http://keycloak:8080
     networks:
       - spring-network
 
@@ -142,15 +161,14 @@ services:
       - "8084:8084"
     depends_on:
       config-server:
-        condition: service_healthy # انتظر حتى يصبح السيرفر "سليماً"
+        condition: service_healthy
     environment:
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-server:8761/eureka/
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - SPRING_CLOUD_CONFIG_RETRY_INITIAL_INTERVAL=3000
-      - SPRING_CLOUD_CONFIG_RETRY_MAX_INTERVAL=10000
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - EUREKA_SERVER_URL=http://discovery-server:8761/eureka/
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9092
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - KEYCLOAK_URL=http://keycloak:8080
     networks:
       - spring-network
 
@@ -159,27 +177,25 @@ services:
     ports:
       - "9010:9000"
     environment:
-      KAFKA_BROKERCONNECT: "kafka-1:29092"
+      KAFKA_BROKERCONNECT: "kafka-1:9092"
     depends_on:
       - kafka
     networks:
       - spring-network
 
-
   keycloak:
-    container_name: keycloak  # هذا الاسم هو الذي تبحث عنه البوابة
-    image: quay.io/keycloak/keycloak:latest # أو النسخة التي تستخدمها
+    container_name: keycloak
+    image: quay.io/keycloak/keycloak:latest
     command: start-dev
     environment:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
-      - KC_HOSTNAME_STRICT=false # مهم جداً للتجربة المحلية
+      - KC_HOSTNAME_STRICT=false
       - KC_HTTP_ENABLED=true
     ports:
       - "8080:8080"
     networks:
-      - spring-network # يجب أن تكون نفس شبكة api-gateway
-
+      - spring-network
 
   prometheus:
     image: prom/prometheus:latest
@@ -188,6 +204,15 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    environment:
+      # These variables serve the intelligent prometheus.yml file we created
+      - API_GATEWAY_HOST=api-gateway
+      - CONFIG_SERVER_HOST=config-server
+      - DISCOVERY_SERVER_HOST=discovery-server
+      - INVENTORY_SERVICE_HOST=inventory-service
+      - ORDER_SERVICE_HOST=order-service
+      - NOTIFICATION_SERVICE_HOST=notification-service
+      - ZIPKIN_HOST=zipkin
     networks:
       - spring-network
 
@@ -199,9 +224,30 @@ services:
     networks:
       - spring-network
 
+
+  mysql-inventory:
+    image: mysql:8.0
+    container_name: mysql-inventory
+    ports:
+      - "3307:3306" # Note the mapping between external port 3307 and internal port 3306
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: inventory_service
+    networks:
+      - spring-network
+
+  mysql-order:
+    image: mysql:8.0
+    container_name: mysql-order
+    ports:
+      - "3308:3306" # External port 3308
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: order_service
+    networks:
+      - spring-network
+
+
 networks:
   spring-network:
     driver: bridge
-
-
-

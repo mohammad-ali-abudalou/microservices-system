@@ -11,11 +11,50 @@ spec:
       labels:
         app: notification-service
     spec:
-      # ننتظر حتى يعمل Kafka أولاً
+      # Init Containers - Execute in order before main container starts
       initContainers:
+        # Wait for Config Server to be ready
+        - name: wait-for-config-server
+          image: busybox:1.28
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for Config Server at config-server:8888..."
+              until nc -z config-server 8888; do
+                echo "Config Server not ready, waiting..."
+                sleep 2
+              done
+              echo "Config Server is ready!"
+
+        # Wait for Keycloak to be ready
+        - name: wait-for-keycloak
+          image: busybox:1.28
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for Keycloak at keycloak-service:8080..."
+              until nc -z keycloak-service 8080; do
+                echo "Keycloak not ready, waiting..."
+                sleep 2
+              done
+              echo "Keycloak is ready!"
+
+        # Wait for Kafka to be ready
         - name: wait-for-kafka
           image: busybox:1.28
-          command: [ 'sh', '-c', 'until nc -z kafka 9092; do echo waiting for kafka; sleep 2; done;' ]
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for Kafka at kafka:9092..."
+              until nc -z kafka 9092; do
+                echo "Kafka not ready, waiting..."
+                sleep 2
+              done
+              echo "Kafka is ready!"
+
       containers:
         - name: notification-service
           image: notification-service:v1
@@ -25,4 +64,8 @@ spec:
                 name: microservices-config
           env:
             - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
-              value: "kafka:9092" # إضافة صريحة لضمان القيمة
+              value: "kafka:9092" # Use the correct Kubernetes service name
+            - name: SPRING_CLOUD_CONFIG_URI
+              value: "http://config-server:8888"
+            - name: SPRING_CONFIG_IMPORT
+              value: "configserver:http://config-server:8888"

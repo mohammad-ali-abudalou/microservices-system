@@ -26,14 +26,15 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-config-server'
     implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-    // مكتبة Actuator لمراقبة حالة التطبيق
+
+    // Actuator library for application health monitoring
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    // مكتبة Micrometer لتحويل البيانات لصيغة يفهمها Prometheus
+
+    // Micrometer library to convert metrics to Prometheus-compatible format
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
-
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

@@ -14,6 +14,7 @@ spec:
       containers:
         - name: mysql
           image: mysql:8.0
+          imagePullPolicy: IfNotPresent  # This line tells it: if the image exists locally, don't go to the internet
           env:
             - name: MYSQL_DATABASE
               value: mysql-order

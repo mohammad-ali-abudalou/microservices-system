@@ -23,7 +23,8 @@ ext {
 }
 
 dependencies {
-    // المحرك الأساسي
+
+    // The core engine
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-server'
 
     // Config & Bootstrap

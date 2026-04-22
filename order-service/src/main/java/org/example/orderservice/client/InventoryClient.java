@@ -9,7 +9,8 @@ import java.util.List;
 
 @FeignClient(name = "inventory-service")
 public interface InventoryClient {
-    // إرسال قائمة SkuCodes للفحص الجماعي
+
+    // Send list of SKU codes for bulk inventory check
     @GetMapping("/api/inventory")
     List<InventoryResponse> checkStock(@RequestParam List<String> skuCode);
 }

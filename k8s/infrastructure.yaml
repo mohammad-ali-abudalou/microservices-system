@@ -18,6 +18,11 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8761
+          env:
+            - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+              value: "http://zipkin:9411/api/v2/spans" # تأكد من اسم خدمة zipkin لديك
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "false"
 ---
 apiVersion: v1
 kind: Service

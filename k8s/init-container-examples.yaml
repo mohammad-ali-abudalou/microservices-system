@@ -1,0 +1,64 @@
+# Alternative: Using curl for HTTP health checks (more reliable)
+# This example shows how to use curl instead of netcat for services with health endpoints
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service-curl-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      initContainers:
+        # Wait for Config Server health endpoint
+        - name: wait-for-config-server
+          image: curlimages/curl:latest
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for Config Server health check..."
+              until curl -f http://config-server:8888/actuator/health; do
+                echo "Config Server not healthy, waiting..."
+                sleep 3
+              done
+              echo "Config Server is healthy!"
+
+        # Wait for Keycloak health endpoint
+        - name: wait-for-keycloak
+          image: curlimages/curl:latest
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for Keycloak health check..."
+              until curl -f http://keycloak-service:8080/realms/master; do
+                echo "Keycloak not ready, waiting..."
+                sleep 3
+              done
+              echo "Keycloak is ready!"
+
+        # Wait for MySQL (using netcat since MySQL doesn't have HTTP health)
+        - name: wait-for-mysql
+          image: busybox:1.28
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for MySQL at mysql-order:3306..."
+              until nc -z mysql-order 3306; do
+                echo "MySQL not ready, waiting..."
+                sleep 2
+              done
+              echo "MySQL is ready!"
+
+      containers:
+        - name: order-service
+          image: order-service:v1
+          # ... rest of your container configuration

@@ -10,20 +10,25 @@ spring:
     config:
       server:
         native:
-          # المسار الذي ستوضع فيه ملفات الـ .properties لكل الخدمات داخل الحاوية
+          # The path where .properties files for all services will be placed inside the container
           search-locations: file:/app/config-repo
+      fail-fast: true  # Fail quickly if Config Server is unreachable
+      retry:
+        max-attempts: 20      # Number of retry attempts
+        initial-interval: 3000  # Initial retry interval in milliseconds (3 seconds)
 
-# إعدادات يوريكا للتسجيل
+# Eureka settings for registration
 eureka:
   instance:
-    hostname: config-server
+    hostname: localhost
+    prefer-ip-address: false
   client:
     register-with-eureka: true
     fetch-registry: true
     serviceUrl:
-      defaultZone: http://discovery-server:8761/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
 
-# المراقبة
+# Monitoring
 management:
   endpoints:
     web:

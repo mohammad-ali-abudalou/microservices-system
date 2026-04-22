@@ -6,34 +6,92 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: order-service  # هذا الحقل مفقود عندك
+      app: order-service
   template:
     metadata:
       labels:
-        app: order-service  # وهذا يجب أن يطابق الـ selector
+        app: order-service
     spec:
+      # Init Containers - Execute in order before main container starts
       initContainers:
+        # Wait for Config Server to be ready
+        - name: wait-for-config-server
+          image: busybox:1.28
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for Config Server at config-server:8888..."
+              until nc -z config-server 8888; do
+                echo "Config Server not ready, waiting..."
+                sleep 2
+              done
+              echo "Config Server is ready!"
+
+        # Wait for Keycloak to be ready
+        - name: wait-for-keycloak
+          image: busybox:1.28
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for Keycloak at keycloak-service:8080..."
+              until nc -z keycloak-service 8080; do
+                echo "Keycloak not ready, waiting..."
+                sleep 2
+              done
+              echo "Keycloak is ready!"
+
+        # Wait for MySQL database
         - name: wait-for-mysql
           image: busybox:1.28
-          command: [ 'sh', '-c', "until nslookup mysql-order; do echo waiting for mysql; sleep 2; done;" ]
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for MySQL at mysql-order:3306..."
+              until nc -z mysql-order 3306; do
+                echo "MySQL not ready, waiting..."
+                sleep 2
+              done
+              echo "MySQL is ready!"
+
+      # Main application container - only starts after all init containers succeed
       containers:
         - name: order-service
           image: order-service:v1
+          imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8082 # المنفذ الصحيح
+            - containerPort: 8082
           envFrom:
             - configMapRef:
                 name: microservices-config
           env:
-            # الرابط الصحيح للاتصال الداخلي (استخدم 3306 دائماً هنا)
+            # The correct connection URL for internal networking (always use 3306 here)
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:mysql://mysql-order:3306/order_service?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
             - name: SPRING_DATASOURCE_USERNAME
               value: "root"
             - name: SPRING_DATASOURCE_PASSWORD
               value: "root"
-            # إجبار Hibernate على معرفة نوع القاعدة ليتجاوز خطأ الـ Metadata
+            # Force Hibernate to recognize the database type to bypass Metadata error
             - name: SPRING_JPA_DATABASE_PLATFORM
               value: "org.hibernate.dialect.MySQLDialect"
             - name: SPRING_JPA_HIBERNATE_DDL_AUTO
               value: "update"
+            - name: SPRING_CLOUD_CONFIG_URI
+              value: "http://config-server:8888"
+            - name: SPRING_CONFIG_IMPORT
+              value: "configserver:http://config-server:8888"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+spec:
+  selector:
+    app: order-service
+  ports:
+    - port: 8082
+      targetPort: 8082

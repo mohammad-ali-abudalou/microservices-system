@@ -1,17 +1,15 @@
 package org.example.inventoryservice.exception;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
+/**
+ * Exception thrown when inventory for a specific SKU code is not found.
+ */
+public class InventoryNotFoundException extends RuntimeException {
 
-// سنستخدم RestControllerAdvice لمعالجة الأخطاء عالمياً في هذه الخدمة
-@RestControllerAdvice
-public class InventoryNotFoundException {
+    public InventoryNotFoundException(String skuCode) {
+        super("Inventory not found for SKU code: " + skuCode);
+    }
 
-    // تأكد أن هذا الكلاس (InventoryException) موجود فعلاً، أو استخدم RuntimeException للتجربة
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<String> handleInventoryError(RuntimeException ex) {
-        return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
+    public InventoryNotFoundException(String skuCode, Throwable cause) {
+        super("Inventory not found for SKU code: " + skuCode, cause);
     }
 }

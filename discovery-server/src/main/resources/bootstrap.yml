@@ -3,4 +3,6 @@ spring:
     name: discovery-server
   cloud:
     config:
-      uri: http://localhost:8888
+      uri: ${CONFIG_SERVER_URL:http://localhost:8888}
+      fail-fast: false  # Set to false so the server doesn't die if config server is delayed by seconds
+      enabled: false    # Recommendation: Eureka prefers to load its settings locally to be the first service to run

@@ -7,19 +7,19 @@ spring:
 
   cloud:
     gateway:
-      # تعريف المسارات بشكل منظم (Declarative Routes)
+      # Define routes in a declarative manner for clean configuration
       routes:
         - id: order-service
-          uri: lb://order-service
+          uri: lb://order-service  # Load-balanced routing to order service
           predicates:
-            - Path=/api/order/**
+            - Path=/api/order/**   # Route all order-related requests
         - id: inventory-service
-          uri: lb://inventory-service
+          uri: lb://inventory-service  # Load-balanced routing to inventory service
           predicates:
-            - Path=/api/inventory/**
+            - Path=/api/inventory/**  # Route all inventory-related requests
 
     config:
-      import: "optional:configserver:http://config-server:8888"
+      import: "optional:configserver:http://localhost:8888"
       fail-fast: true
       username: admin
       password: admin
@@ -28,14 +28,17 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          # استخدم اسم الخدمة keycloak للعمل داخل Docker
+          # These will be overridden by environment variables from ConfigMap in Kubernetes
           issuer-uri: http://localhost:8080/realms/master
-          jwk-set-uri: http://keycloak:8080/realms/master/protocol/openid-connect/certs
+          jwk-set-uri: http://localhost:8080/realms/master/protocol/openid-connect/certs
 
 eureka:
+  instance:
+    hostname: localhost
+    prefer-ip-address: false
   client:
     service-url:
-      defaultZone: http://discovery-server:8761/eureka/
+      defaultZone: http://localhost:8761/eureka/
 
 management:
   endpoints:
@@ -44,4 +47,10 @@ management:
         include: health,info,prometheus,tracing
   tracing:
     sampling:
-      probability: 1.0 # تسجيل كل الطلبات للتتبع (Tracing)
+      probability: 1.0  # Log all requests for comprehensive tracing
+
+  # Example configuration for Kubernetes deployment
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/actuator/prometheus"
+    prometheus.io/port: "9000"

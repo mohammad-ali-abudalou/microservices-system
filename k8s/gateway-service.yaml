@@ -12,11 +12,33 @@ spec:
       labels:
         app: gateway-service
     spec:
-      # --- الجزء السحري: Init Container ---
+      # --- The magical part: Init Container ---
       initContainers:
         - name: wait-for-config-server
           image: busybox:1.28
-          command: [ 'sh', '-c', "until nslookup config-server; do echo waiting for config-server; sleep 2; done" ]
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for Config Server at config-server:8888..."
+              until nc -z config-server 8888; do
+                echo "Config Server not ready, waiting..."
+                sleep 2
+              done
+              echo "Config Server is ready!"
+
+        - name: wait-for-keycloak
+          image: busybox:1.28
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for Keycloak at keycloak-service:8080..."
+              until nc -z keycloak-service 8080; do
+                echo "Keycloak not ready, waiting..."
+                sleep 2
+              done
+              echo "Keycloak is ready!"
 
       containers:
         - name: gateway-service
@@ -24,9 +46,18 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 9000
+          envFrom:
+            - configMapRef:
+                name: microservices-config
           env:
+            # Override specific values if needed for this service
+            - name: SPRING_CLOUD_CONFIG_URI
+              value: "http://config-server:8888"
             - name: SPRING_CONFIG_IMPORT
-              value: "configserver:http://config-server:8888" # التأكد من توجيهه للاسم الصحيح داخل K8s
+              value: "configserver:http://config-server:8888"
+            - name: KEYCLOAK_URL
+              value: "http://keycloak-service:8080"
+
 ---
 apiVersion: v1
 kind: Service

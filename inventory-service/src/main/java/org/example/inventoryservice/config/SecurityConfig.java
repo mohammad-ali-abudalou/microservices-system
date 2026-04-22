@@ -16,8 +16,8 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/actuator/**").permitAll() // السماح لبروميثيوس بقراءة البيانات
-                        .anyRequest().authenticated() // لا يُسمح بأي طلب بدون توكن
+                        .requestMatchers("/actuator/**").permitAll() // Allow Prometheus to read the data
+                        .anyRequest().authenticated() // No request is allowed without a token
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 

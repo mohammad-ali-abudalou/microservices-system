@@ -1,0 +1,50 @@
+name: Java CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      # GitHub will run these services to support integration tests
+      docker:
+        image: docker:dind
+        options: --privileged
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build and Run Tests
+        # This command will run the tests we wrote using Testcontainers
+        run: ./gradlew build
+
+      - name: Login to Docker Hub
+        # We'll use this step to push images later (requires setting up Secrets in GitHub)
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker Images
+        if: github.event_name == 'push'
+        run: |
+          # Example for Order Service
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/order-service:latest ./order-service
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/order-service:latest

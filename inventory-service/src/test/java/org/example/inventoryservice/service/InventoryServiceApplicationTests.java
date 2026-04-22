@@ -20,13 +20,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class InventoryServiceApplicationTests {
 
+    @Container
+    static MySQLContainer<?> mySQLContainer = new MySQLContainer<>("mysql:8.0");
+
     static {
-        // تعطيل حاوية التنظيف التلقائي لأنها تسبب مشاكل اتصال في ويندوز
+        // Disable automatic cleanup container as it causes connection issues on Windows
         System.setProperty("testcontainers.ryuk.disabled", "true");
     }
 
-    @Container
-    static MySQLContainer<?> mySQLContainer = new MySQLContainer<>("mysql:8.0");
     @Autowired
     private MockMvc mockMvc;
 

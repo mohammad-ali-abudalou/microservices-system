@@ -12,5 +12,5 @@ public class ApiGatewayApplication {
         SpringApplication.run(ApiGatewayApplication.class, args);
     }
 
-    // ملاحظة: يُفضل نقل الـ Routes إلى ملف application.yml لسهولة التعديل دون إعادة بناء الكود
+    // Note: It is preferable to move the Routes to application.yml file for easy modification without rebuilding the code
 }

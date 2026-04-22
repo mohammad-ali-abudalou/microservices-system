@@ -27,37 +27,35 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
 
-    // مكتبة الأمان لـ WebFlux (لأن البوابة تعتمد على Netty/Reactive)
+    // Security library for WebFlux (since the gateway uses Netty/Reactive)
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
-    // دعم الـ OAuth2 والـ JWT
+    // OAuth2 and JWT support
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
-    // 1. الأساس للـ Tracing
+    // 1. Core tracing infrastructure
     implementation 'io.micrometer:micrometer-tracing-bom:1.2.0'
     implementation 'io.micrometer:micrometer-tracing'
 
-    // 2. الربط مع Zipkin
+    // 2. Zipkin integration for distributed tracing
     implementation 'io.micrometer:micrometer-tracing-bridge-otel'
     implementation 'io.opentelemetry:opentelemetry-exporter-zipkin'
 
-    // 3. لتمكين الـ Tracing في تطبيق Spring Boot
+    // 3. Enable tracing in Spring Boot applications
     implementation 'io.github.openfeign:feign-micrometer'
 
-    // 3. لربط الـ HTTP Requests تلقائياً (مهم جداً للـ Gateway)
+    // 4. Automatic HTTP request observation (critical for Gateway)
     implementation 'io.micrometer:micrometer-observation'
 
     implementation 'org.springframework.boot:spring-boot-starter-aop'
-
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-
     implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
-
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
 
-    // مكتبة Actuator لمراقبة حالة التطبيق
+    // Actuator library for application health monitoring
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    // مكتبة Micrometer لتحويل البيانات لصيغة يفهمها Prometheus
+
+    // Micrometer library to convert metrics to Prometheus-compatible format
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
     implementation 'org.springframework.retry:spring-retry'

@@ -17,10 +17,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/eureka/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        // السطر التالي سيسمح بفتح واجهة يوريكا في المتصفح بدون Password
-                        //.requestMatchers("/").permitAll()
-                        //.requestMatchers("/lastn/**", "/js/**", "/css/**", "/fonts/**", "/images/**").permitAll()
-                        //.anyRequest().authenticated()
+                        // The following line will allow opening the Eureka interface in the browser without a password
+                        .requestMatchers("/").permitAll()
+                        .requestMatchers("/lastn/**", "/js/**", "/css/**", "/fonts/**", "/images/**").permitAll()
+                        .anyRequest().authenticated()
                 )
                 .httpBasic(org.springframework.security.config.Customizer.withDefaults());
 

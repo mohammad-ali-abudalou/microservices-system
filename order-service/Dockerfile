@@ -1,11 +1,11 @@
-# استخدام نسخة تشغيل خفيفة فقط
+# Use a lightweight runtime-only version
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# نسخ ملف الـ JAR الذي بنيناه يدوياً في الخطوة السابقة
+# Copy the JAR file that we built manually in the previous step
 COPY build/libs/*.jar app.jar
 
-# المنفذ (تأكد من تغييره حسب كل خدمة: 8888 للـ config، 8761 للـ discovery، إلخ)
+# Port (make sure to change it for each service: 8888 for config, 8761 for discovery, etc.)
 EXPOSE 8082
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

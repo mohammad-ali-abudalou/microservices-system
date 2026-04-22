@@ -15,12 +15,12 @@ public class NotificationService {
     public void handleNotification(OrderPlacedEvent orderPlacedEvent) {
         log.info("Received new event from Kafka: Order Number {}", orderPlacedEvent.getOrderNumber());
 
-        // تفويض المهمة لمنطق الإرسال
+        // Delegate task to sending logic
         sendEmailNotification(orderPlacedEvent.getOrderNumber());
     }
 
     private void sendEmailNotification(String orderNumber) {
-        // هنا يتم وضع منطق إرسال الإيميل الحقيقي
+        // Here we place the real email sending logic
         log.info("Successfully processed notification for order: {}", orderNumber);
         log.info("Email sent to customer for order reference: {}", orderNumber);
     }
