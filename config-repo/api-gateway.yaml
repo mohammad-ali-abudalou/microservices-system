@@ -21,21 +21,30 @@ spring:
               args:
                 name: orderService
                 fallbackUri: forward:/orderFallback
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET,POST,PUT,DELETE
         - id: inventory-service
           uri: lb://inventory-service
           predicates:
             - Path=/api/inventory/**
           filters:
             - TokenRelay
-            - PreserveHostHeader # Added to ensure the request reaches correctly
-
+            - name: CircuitBreaker
+              args:
+                name: inventoryService
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET,POST,PUT,DELETE
 
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8080/realms/master
-          jwk-set-uri: http://localhost:8080/realms/master/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/master
+          jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/master/protocol/openid-connect/certs
 
   main:
     allow-bean-definition-overriding: true
@@ -49,6 +58,10 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,tracing
   tracing:
     sampling:
       probability: 1.0

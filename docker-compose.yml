@@ -97,6 +97,8 @@ services:
     ports:
       - "9000:9000"
     depends_on:
+      discovery-server:
+        condition: service_healthy
       config-server:
         condition: service_healthy
       keycloak:
@@ -109,6 +111,7 @@ services:
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_PROFILES_ACTIVE=docker
     networks:
       - spring-network
 
@@ -119,15 +122,22 @@ services:
     ports:
       - "8081:8081"
     depends_on:
+      discovery-server:
+        condition: service_healthy
       config-server:
         condition: service_healthy
+      mysql-inventory:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - CONFIG_SERVER_URL=http://config-server:8888
       - EUREKA_SERVER_URL=http://discovery-server:8761/eureka/
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
-      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:29092
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
-      - DB_HOST=mysql-inventory # Ensure this matches your database container name
+      - DB_HOST=mysql-inventory
       - KEYCLOAK_URL=http://keycloak:8080
     networks:
       - spring-network
@@ -139,14 +149,21 @@ services:
     ports:
       - "8082:8082"
     depends_on:
+      discovery-server:
+        condition: service_healthy
       config-server:
         condition: service_healthy
+      mysql-order:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - CONFIG_SERVER_URL=http://config-server:8888
       - EUREKA_SERVER_URL=http://discovery-server:8761/eureka/
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
-      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9092
-      - DB_HOST=mysql-order # Ensure this matches your database container name
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:29092
+      - DB_HOST=mysql-order
       - SPRING_ZIPKIN_BASE_URL=http://zipkin:9411
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
       - KEYCLOAK_URL=http://keycloak:8080
@@ -162,11 +179,13 @@ services:
     depends_on:
       config-server:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
       - EUREKA_SERVER_URL=http://discovery-server:8761/eureka/
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
-      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:29092
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
       - KEYCLOAK_URL=http://keycloak:8080
     networks:
@@ -194,6 +213,12 @@ services:
       - KC_HTTP_ENABLED=true
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     networks:
       - spring-network
 
@@ -233,6 +258,12 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: inventory_service
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - spring-network
 
@@ -244,6 +275,12 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: order_service
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - spring-network
 

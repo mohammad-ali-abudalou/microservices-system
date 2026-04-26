@@ -48,8 +48,8 @@ spec:
             - 'sh'
             - '-c'
             - |
-              echo "Waiting for Kafka at kafka:9092..."
-              until nc -z kafka 9092; do
+              echo "Waiting for Kafka at kafka-service:9092..."
+              until nc -z kafka-service 9092; do
                 echo "Kafka not ready, waiting..."
                 sleep 2
               done
@@ -63,9 +63,28 @@ spec:
             - configMapRef:
                 name: microservices-config
           env:
-            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
-              value: "kafka:9092" # Use the correct Kubernetes service name
             - name: SPRING_CLOUD_CONFIG_URI
               value: "http://config-server:8888"
             - name: SPRING_CONFIG_IMPORT
               value: "configserver:http://config-server:8888"
+            # --- إعدادات التواصل مع الكافكا ---
+            - name: SPRING_KAFKA_CONSUMER_GROUP_ID
+              value: "notification-group"
+            - name: SPRING_KAFKA_LISTENER_MISSING_TOPICS_FATAL
+              value: "false"
+            # هذا السطر يمنع توقف الخدمة إذا فشل تحويل الـ JSON
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-service:9092"
+            - name: SPRING_KAFKA_CONSUMER_PROPERTIES_SPRING_JSON_TRUSTED_PACKAGES
+              value: "*"
+            - name: SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET
+              value: "earliest"
+            - name: SPRING_KAFKA_CONSUMER_KEY_DESERIALIZER
+              value: "org.apache.kafka.common.serialization.StringDeserializer"
+            - name: SPRING_KAFKA_CONSUMER_VALUE_DESERIALIZER
+              value: "org.springframework.kafka.support.serializer.JsonDeserializer"
+            - name: SPRING_KAFKA_LISTENER_TYPE
+              value: "single"
+            # هذا السطر يمنع توقف الخدمة إذا فشل تحويل الـ JSON
+            - name: SPRING_KAFKA_LISTENER_COMMON_ERROR_HANDLER
+              value: "org.springframework.kafka.listener.DefaultErrorHandler"

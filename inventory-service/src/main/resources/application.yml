@@ -1,0 +1,235 @@
+spring:
+  application:
+    name: inventory-service
+
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+    fail-fast: true
+
+  cloud:
+    config:
+      username: ${CONFIG_SERVER_USERNAME:admin}
+      password: ${CONFIG_SERVER_PASSWORD:admin}
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:3307/inventory_service
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    show-sql: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/master
+          jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/master/protocol/openid-connect/certs
+
+security:
+  oauth2:
+    accepted-issuers:
+      - http://localhost:8080/realms/master
+      - http://keycloak:8080/realms/master
+
+server:
+  port: 8081
+
+eureka:
+  instance:
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,tracing
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
+
+logging:
+  level:
+    root: INFO
+    org.example.inventoryservice.config.SecurityConfig: DEBUG
+    org.springframework.security: TRACE
+    org.springframework.security.oauth2: TRACE
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888}"
+    fail-fast: true
+
+  application:
+    name: inventory-service
+
+
+
+  cloud:
+    config:
+      username: ${CONFIG_SERVER_USERNAME:admin}
+      password: ${CONFIG_SERVER_PASSWORD:admin}
+      retry:
+        initial-interval: 1000
+        max-interval: 2000
+        multiplier: 1.1
+        max-attempts: 10
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:mysql-inventory}:3306/inventory?createDatabaseIfNotExist=true&autoReconnect=true&useSSL=false&allowPublicKeyRetrieval=true&connectTimeout=30000&socketTimeout=60000&serverTimezone=UTC
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 30000
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      initialization-fail-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    show-sql: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_URL:http://keycloak:8080}/realms/master/protocol/openid-connect/certs
+
+security:
+  oauth2:
+    accepted-issuers:
+      - http://localhost:8080/realms/master
+      - http://keycloak:8080/realms/master
+server:
+  port: 8081
+
+eureka:
+  instance:
+    hostname: inventory-service
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://discovery-server:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,tracing
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: inventory-service
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://zipkin:9411/api/v2/spans}
+
+logging:
+  level:
+    root: INFO
+    org.example.inventoryservice.config.SecurityConfig: DEBUG
+    org.springframework.security: TRACE
+    org.springframework.security.oauth2: TRACE
+
+---
+spring:
+  config:
+    activate:
+      on-profile: k8s
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888}"
+    fail-fast: true
+
+  application:
+    name: inventory-service
+
+
+
+  cloud:
+    config:
+      username: ${CONFIG_SERVER_USERNAME:admin}
+      password: ${CONFIG_SERVER_PASSWORD:admin}
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:mysql-inventory}:3306/inventory_service
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    show-sql: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://keycloak-service:8080}/realms/master
+          jwk-set-uri: ${KEYCLOAK_URL:http://keycloak-service:8080}/realms/master/protocol/openid-connect/certs
+
+security:
+  oauth2:
+    accepted-issuers:
+      - http://keycloak-service:8080/realms/master
+
+server:
+  port: 8081
+
+eureka:
+  instance:
+    hostname: inventory-service
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://discovery-server:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,tracing
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: inventory-service
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://zipkin:9411/api/v2/spans}

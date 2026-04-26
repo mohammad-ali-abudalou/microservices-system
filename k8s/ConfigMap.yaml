@@ -7,12 +7,12 @@ data:
 
   # Replace localhost with service name in K8s
   EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://discovery-server:8761/eureka/"
-  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka-service:9092"
   SPRING_CLOUD_CONFIG_URI: "http://config-server:8888"
 
   # Keycloak OAuth2 Configuration for JWT validation
-  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "http://keycloak-service:8080/realms/master"
-  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak-service:8080/realms/master/protocol/openid-connect/certs"
+  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "http://127.0.0.1:8080/realms/master"
+  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://127.0.0.1:8080/realms/master/protocol/openid-connect/certs"
 
   # Additional environment variables
   KEYCLOAK_URL: "http://keycloak-service:8080"

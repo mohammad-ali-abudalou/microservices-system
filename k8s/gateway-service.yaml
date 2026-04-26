@@ -12,13 +12,17 @@ spec:
       labels:
         app: gateway-service
     spec:
-      # --- The magical part: Init Container ---
+      dnsPolicy: ClusterFirst
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "2"
       initContainers:
         - name: wait-for-config-server
           image: busybox:1.28
           command:
-            - 'sh'
-            - '-c'
+            - sh
+            - -c
             - |
               echo "Waiting for Config Server at config-server:8888..."
               until nc -z config-server 8888; do
@@ -26,12 +30,11 @@ spec:
                 sleep 2
               done
               echo "Config Server is ready!"
-
         - name: wait-for-keycloak
           image: busybox:1.28
           command:
-            - 'sh'
-            - '-c'
+            - sh
+            - -c
             - |
               echo "Waiting for Keycloak at keycloak-service:8080..."
               until nc -z keycloak-service 8080; do
@@ -39,7 +42,6 @@ spec:
                 sleep 2
               done
               echo "Keycloak is ready!"
-
       containers:
         - name: gateway-service
           image: gateway-service:v1
@@ -50,14 +52,34 @@ spec:
             - configMapRef:
                 name: microservices-config
           env:
-            # Override specific values if needed for this service
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
             - name: SPRING_CLOUD_CONFIG_URI
               value: "http://config-server:8888"
             - name: SPRING_CONFIG_IMPORT
               value: "configserver:http://config-server:8888"
             - name: KEYCLOAK_URL
               value: "http://keycloak-service:8080"
-
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+              value: "http://127.0.0.1:8080/realms/master"
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
+              value: "http://keycloak-service:8080/realms/master/protocol/openid-connect/certs"
+            - name: SECURITY_OAUTH2_ACCEPTED_ISSUERS
+              value: "http://127.0.0.1:8080/realms/master,http://keycloak-service:8080/realms/master"
+            - name: EUREKA_SERVER_URL
+              value: "http://discovery-server:8761/eureka/"
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: "http://discovery-server:8761/eureka/"
+            - name: EUREKA_INSTANCE_HOSTNAME
+              value: "gateway-service"
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "false"
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "false"
+            - name: MANAGEMENT_TRACING_SAMPLING_PROBABILITY
+              value: "0.0"
+            - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+              value: "http://zipkin:9411/api/v2/spans"
 ---
 apiVersion: v1
 kind: Service

@@ -1,11 +1,15 @@
 spring:
   application:
-    name: api-gateway
+    name: order-service
   cloud:
     config:
       uri: ${CONFIG_SERVER_URL:http://localhost:8888}
+      fail-fast: true
       retry:
         initial-interval: 1000
         max-interval: 2000
         multiplier: 1.1
         max-attempts: 10
+      username: ${CONFIG_SERVER_USERNAME:admin}
+      password: ${CONFIG_SERVER_PASSWORD:admin}
+

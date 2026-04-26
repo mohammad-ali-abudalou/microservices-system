@@ -23,44 +23,32 @@ ext {
 }
 
 dependencies {
+    // 1. Core Spring Cloud Gateway & Service Discovery
     implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    implementation 'org.springframework.cloud:spring-cloud-starter-config'
+    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
+
+    // 2. Resilience4j - الإعتماد على الـ Starter بدلاً من المكتبات المنفردة
+    // هذا السطر يغني عن (circuitbreaker, retry, ratelimiter) يدوياً ويضمن توافقها
     implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
+    implementation 'io.github.resilience4j:resilience4j-micrometer' // بدون إصدار، دع Spring Cloud تديره
 
-    // Security library for WebFlux (since the gateway uses Netty/Reactive)
+    // 3. Security & OAuth2
     implementation 'org.springframework.boot:spring-boot-starter-security'
-
-    // OAuth2 and JWT support
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
-    // 1. Core tracing infrastructure
-    implementation 'io.micrometer:micrometer-tracing-bom:1.2.0'
-    implementation 'io.micrometer:micrometer-tracing'
-
-    // 2. Zipkin integration for distributed tracing
+    // 4. Observability (Tracing & Metrics)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'io.micrometer:micrometer-tracing-bridge-otel'
     implementation 'io.opentelemetry:opentelemetry-exporter-zipkin'
 
-    // 3. Enable tracing in Spring Boot applications
-    implementation 'io.github.openfeign:feign-micrometer'
-
-    // 4. Automatic HTTP request observation (critical for Gateway)
-    implementation 'io.micrometer:micrometer-observation'
-
-    implementation 'org.springframework.boot:spring-boot-starter-aop'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
-    implementation 'org.springframework.cloud:spring-cloud-starter-config'
-
-    // Actuator library for application health monitoring
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
-    // Micrometer library to convert metrics to Prometheus-compatible format
-    implementation 'io.micrometer:micrometer-registry-prometheus'
-
-    implementation 'org.springframework.retry:spring-retry'
+    // 5. AOP (مهم جداً لعمل Resilience4j)
     implementation 'org.springframework.boot:spring-boot-starter-aop'
 
+    // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

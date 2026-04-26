@@ -1,0 +1,174 @@
+﻿spring:
+  application:
+    name: notification-service
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+    fail-fast: true
+  cloud:
+    config:
+      username: ${CONFIG_SERVER_USERNAME:admin}
+      password: ${CONFIG_SERVER_PASSWORD:admin}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: notification-group
+      auto-offset-reset: earliest
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "*"
+        spring.json.type.mapping: orderPlaced:org.example.notificationservice.event.OrderPlacedEvent
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/master
+          jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/master/protocol/openid-connect/certs
+server:
+  port: 8084
+eureka:
+  instance:
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,tracing
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888}"
+    fail-fast: true
+  application:
+    name: notification-service
+
+  cloud:
+    config:
+      username: ${CONFIG_SERVER_USERNAME:admin}
+      password: ${CONFIG_SERVER_PASSWORD:admin}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-1:9092}
+    consumer:
+      group-id: notification-group
+      auto-offset-reset: earliest
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "*"
+        spring.json.type.mapping: orderPlaced:org.example.notificationservice.event.OrderPlacedEvent
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_URL:http://keycloak:8080}/realms/master/protocol/openid-connect/certs
+
+security:
+  oauth2:
+    accepted-issuers:
+      - http://localhost:8080/realms/master
+      - http://keycloak:8080/realms/master
+
+server:
+  port: 8084
+eureka:
+  instance:
+    hostname: notification-service
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://discovery-server:8761/eureka/}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,tracing
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: notification-service
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://zipkin:9411/api/v2/spans}
+---
+spring:
+  config:
+    activate:
+      on-profile: k8s
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888}"
+    fail-fast: true
+  application:
+    name: notification-service
+
+  cloud:
+    config:
+      username: ${CONFIG_SERVER_USERNAME:admin}
+      password: ${CONFIG_SERVER_PASSWORD:admin}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-service:9092}
+    consumer:
+      group-id: notification-group
+      auto-offset-reset: earliest
+      # استخدم الـ ErrorHandlingDeserializer لتجنب توقف الخدمة عند الخطأ
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "*"
+        # تأكد أن المسار هنا هو المسار الصحيح للكائن داخل مشروع الـ notification
+        spring.json.type.mapping: orderPlaced:org.example.notificationservice.event.OrderPlacedEvent
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://keycloak-service:8080}/realms/master
+          jwk-set-uri: ${KEYCLOAK_URL:http://keycloak-service:8080}/realms/master/protocol/openid-connect/certs
+server:
+  port: 8084
+eureka:
+  instance:
+    hostname: notification-service
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://discovery-server:8761/eureka/}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,tracing
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: notification-service
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://zipkin:9411/api/v2/spans}

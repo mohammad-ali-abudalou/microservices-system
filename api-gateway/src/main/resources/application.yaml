@@ -1,44 +1,51 @@
-server:
-  port: 9000
-
 spring:
   application:
     name: api-gateway
 
   cloud:
     gateway:
-      # Define routes in a declarative manner for clean configuration
       routes:
         - id: order-service
-          uri: lb://order-service  # Load-balanced routing to order service
+          uri: lb://order-service
           predicates:
-            - Path=/api/order/**   # Route all order-related requests
+            - Path=/api/order/**
+          filters:
+            - TokenRelay=
         - id: inventory-service
-          uri: lb://inventory-service  # Load-balanced routing to inventory service
+          uri: lb://inventory-service
           predicates:
-            - Path=/api/inventory/**  # Route all inventory-related requests
+            - Path=/api/inventory/**
+          filters:
+            - TokenRelay=
 
     config:
-      import: "optional:configserver:http://localhost:8888"
+      import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
       fail-fast: true
-      username: admin
-      password: admin
+      username: ${CONFIG_SERVER_USERNAME:admin}
+      password: ${CONFIG_SERVER_PASSWORD:admin}
 
   security:
     oauth2:
       resourceserver:
         jwt:
-          # These will be overridden by environment variables from ConfigMap in Kubernetes
-          issuer-uri: http://localhost:8080/realms/master
-          jwk-set-uri: http://localhost:8080/realms/master/protocol/openid-connect/certs
+          jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/master/protocol/openid-connect/certs
+
+security:
+  oauth2:
+    accepted-issuers:
+      - http://localhost:8080/realms/master
+      - http://keycloak:8080/realms/master
+
+server:
+  port: 9000
 
 eureka:
   instance:
-    hostname: localhost
-    prefer-ip-address: false
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
 
 management:
   endpoints:
@@ -47,10 +54,312 @@ management:
         include: health,info,prometheus,tracing
   tracing:
     sampling:
-      probability: 1.0  # Log all requests for comprehensive tracing
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
 
-  # Example configuration for Kubernetes deployment
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/path: "/actuator/prometheus"
-    prometheus.io/port: "9000"
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+    instances:
+      order-service:
+        baseConfig: default
+      inventory-service:
+        baseConfig: default
+
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 100ms
+        retryExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - java.io.IOException
+    instances:
+      order-service:
+        baseConfig: default
+      inventory-service:
+        baseConfig: default
+
+  ratelimiter:
+    configs:
+      default:
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0s
+    instances:
+      api-gateway:
+        baseConfig: default
+
+logging:
+  level:
+    root: INFO
+    org.example.apigateway.config.SecurityConfig: DEBUG
+    org.springframework.security: TRACE
+    org.springframework.security.oauth2: TRACE
+    org.springframework.security.web.server.authentication: TRACE
+    org.springframework.web.reactive: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      routes:
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/order/**
+          filters:
+            - TokenRelay=
+            - name: CircuitBreaker
+              args:
+                name: order-service
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET,POST
+        - id: inventory-service
+          uri: lb://inventory-service
+          predicates:
+            - Path=/api/inventory/**
+          filters:
+            - TokenRelay=
+            - name: CircuitBreaker
+              args:
+                name: inventory-service
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET,POST
+
+    config:
+      import: "optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888}"
+      fail-fast: true
+      username: ${CONFIG_SERVER_USERNAME:admin}
+      password: ${CONFIG_SERVER_PASSWORD:admin}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_URL:http://keycloak:8080}/realms/master/protocol/openid-connect/certs
+
+security:
+  oauth2:
+    accepted-issuers:
+      - http://localhost:8080/realms/master
+      - http://keycloak:8080/realms/master
+
+server:
+  port: 9000
+
+eureka:
+  instance:
+    hostname: api-gateway
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://discovery-server:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,tracing
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://zipkin:9411/api/v2/spans}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+    instances:
+      order-service:
+        baseConfig: default
+      inventory-service:
+        baseConfig: default
+
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 100ms
+        retryExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - java.io.IOException
+    instances:
+      order-service:
+        baseConfig: default
+      inventory-service:
+        baseConfig: default
+
+  ratelimiter:
+    configs:
+      default:
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0s
+    instances:
+      api-gateway:
+        baseConfig: default
+
+logging:
+  level:
+    root: INFO
+    org.example.apigateway.config.SecurityConfig: DEBUG
+    org.springframework.cloud.gateway: TRACE
+    org.springframework.security: TRACE
+    org.springframework.web.reactive: DEBUG
+    org.springframework.security.oauth2: TRACE
+    org.springframework.security.web.server.authentication: TRACE
+
+---
+spring:
+  config:
+    activate:
+      on-profile: k8s
+
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      routes:
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/order/**
+          filters:
+            - TokenRelay=
+            - name: CircuitBreaker
+              args:
+                name: order-service
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET,POST
+        - id: inventory-service
+          uri: lb://inventory-service
+          predicates:
+            - Path=/api/inventory/**
+          filters:
+            - TokenRelay=
+            - name: CircuitBreaker
+              args:
+                name: inventory-service
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET,POST
+
+    config:
+      import: "optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888}"
+      fail-fast: true
+      username: ${CONFIG_SERVER_USERNAME:admin}
+      password: ${CONFIG_SERVER_PASSWORD:admin}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_URL:http://keycloak-service:8080}/realms/master/protocol/openid-connect/certs
+
+security:
+  oauth2:
+    accepted-issuers:
+      - http://keycloak-service:8080/realms/master
+
+server:
+  port: 9000
+
+eureka:
+  instance:
+    hostname: api-gateway
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://discovery-server:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,tracing
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://zipkin:9411/api/v2/spans}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+    instances:
+      order-service:
+        baseConfig: default
+      inventory-service:
+        baseConfig: default
+
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 100ms
+        retryExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - java.io.IOException
+    instances:
+      order-service:
+        baseConfig: default
+      inventory-service:
+        baseConfig: default
+
+  ratelimiter:
+    configs:
+      default:
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0s
+    instances:
+      api-gateway:
+        baseConfig: default

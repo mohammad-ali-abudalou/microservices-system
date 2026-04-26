@@ -83,9 +83,6 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
-
-    // For this project, we'll need Testcontainers later for integration testing
-    testImplementation 'org.testcontainers:mysql:1.19.0'
 }
 
 dependencyManagement {

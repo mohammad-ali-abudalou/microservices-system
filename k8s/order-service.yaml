@@ -12,6 +12,7 @@ spec:
       labels:
         app: order-service
     spec:
+      dnsPolicy: ClusterFirst
       # Init Containers - Execute in order before main container starts
       initContainers:
         # Wait for Config Server to be ready
@@ -32,8 +33,8 @@ spec:
         - name: wait-for-keycloak
           image: busybox:1.28
           command:
-            - 'sh'
-            - '-c'
+            - sh
+            - -c
             - |
               echo "Waiting for Keycloak at keycloak-service:8080..."
               until nc -z keycloak-service 8080; do
@@ -56,6 +57,20 @@ spec:
               done
               echo "MySQL is ready!"
 
+        # Wait for Kafka to be ready
+        - name: wait-for-kafka
+          image: busybox:1.28
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for Kafka at kafka-service:9092..."
+              until nc -z kafka-service 9092; do
+                echo "Kafka not ready, waiting..."
+                sleep 2
+              done
+              echo "Kafka is ready!"
+
       # Main application container - only starts after all init containers succeed
       containers:
         - name: order-service
@@ -67,6 +82,17 @@ spec:
             - configMapRef:
                 name: microservices-config
           env:
+            - name: KEYCLOAK_URL
+              value: "http://keycloak-service:8080"
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+              value: "http://127.0.0.1:8080/realms/master"
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
+              value: "http://keycloak-service:8080/realms/master/protocol/openid-connect/certs"
+            - name: SECURITY_OAUTH2_ACCEPTED_ISSUERS
+              value: "http://127.0.0.1:8080/realms/master,http://keycloak-service:8080/realms/master"
+
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
             # The correct connection URL for internal networking (always use 3306 here)
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:mysql://mysql-order:3306/order_service?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
@@ -83,6 +109,55 @@ spec:
               value: "http://config-server:8888"
             - name: SPRING_CONFIG_IMPORT
               value: "configserver:http://config-server:8888"
+            - name: EUREKA_SERVER_URL
+              value: "http://discovery-server:8761/eureka/"
+            # --- إعدادات التواصل مع الكافكا ---
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-service:9092"
+
+            # --- حل مشكلة أخطاء Zipkin في السجلات ---
+            - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+              value: "http://zipkin-service:9411/api/v2/spans"
+            - name: MANAGEMENT_ZIPKIN_TRACING_CONNECT_TIMEOUT
+              value: "2s"
+
+            # --- إعدادات إضافية لضمان استقرار Eureka في k8s ---
+            - name: EUREKA_CLIENT_FETCH_REGISTRY
+              value: "true"
+            - name: EUREKA_CLIENT_REGISTER_WITH_EUREKA
+              value: "true"
+
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: "http://discovery-server:8761/eureka/"
+            - name: EUREKA_INSTANCE_HOSTNAME
+              value: "order-service"
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: EUREKA_INSTANCE_INSTANCE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "false"
+            - name: MANAGEMENT_TRACING_SAMPLING_PROBABILITY
+              value: "0.0"
+            - name: SPRING_KAFKA_CONSUMER_PROPERTIES_SPRING_JSON_TRUSTED_PACKAGES
+              value: "*"
+            - name: SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET
+              value: "earliest"
+            - name: SPRING_KAFKA_CONSUMER_KEY_DESERIALIZER
+              value: "org.apache.kafka.common.serialization.StringDeserializer"
+            - name: SPRING_KAFKA_CONSUMER_VALUE_DESERIALIZER
+              value: "org.springframework.kafka.support.serializer.JsonDeserializer"
+            - name: SPRING_KAFKA_LISTENER_TYPE
+              value: "single"
+            # هذا السطر يمنع توقف الخدمة إذا فشل تحويل الـ JSON
+            - name: SPRING_KAFKA_LISTENER_COMMON_ERROR_HANDLER
+              value: "org.springframework.kafka.listener.DefaultErrorHandler"
+            - name: SPRING_KAFKA_PRODUCER_PROPERTIES_ENABLE_IDEMPOTENCE
+              value: "false"
+            - name: SPRING_KAFKA_PRODUCER_ACKS
+              value: "1"
 
 ---
 apiVersion: v1
